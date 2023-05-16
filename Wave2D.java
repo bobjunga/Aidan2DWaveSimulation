@@ -27,10 +27,10 @@ public class Wave2D{
 		snapY = 4;
 
 		// steps is the number of time steps to perform. This is the size of the third array dimension
-		steps = 10000;	
+		steps = 10;
 		
 		// lx and ly are the number of grid points in those directions. These are the sizes of the 1st and 2nd array dimensions
-		lx = 11;	ly = 11;
+		lx = 21;	ly = 21;
 
 		// (x0,y0) is the grid point of the initial peak disturbance (used to generate the initial conditions)
 		x0 = (int)(0.5*lx)/*(int)(Math.random()*(lx-1)+1)*/;
@@ -60,9 +60,16 @@ public class Wave2D{
 			for (int py = 0; py < height; py++) {
 				// Map pixel coords to surface coords and scale the u value to a grayscale color
 				int x = (int)(px*scaleX);
-				int y = (int) (py * scaleY);
+				int y = ly -1 - (int) (py * scaleY);
 				int grayValue = (int)(u[x][y][timeStep] * scaleU);
+
+				// clip grayValue to 255 in case there is an error it wont crash the run 
 				grayValue = (grayValue>255) ? 255 : grayValue;
+
+				// this makes 1 pixel wide X and Y axis so we know where the origin is.
+				if (px==0 || py==height-1)
+					grayValue = 255;
+
 				Color color = new Color(grayValue, grayValue, grayValue);
 
 				// Set the pixel color
@@ -469,19 +476,26 @@ public class Wave2D{
 		*/
 		for (int x = 1; x < lx - 1; x++) {
 			for (int y = 1; y < ly - 1; y++) {
+				// lower quad
 				if (y < (y0 + 0.0) / x0 * (x) && y < (y0 + 0.0) / (x0 - lx) * (x - lx)) {
 					a.u[x][y][0] = 1.0*u0 * (y + 0.0) / y0;
-				} else if (y > (y0 + 0.0) / x0 * (x) && y < -(ly - y0) / x0 * x + ly) {
+				}
+				// left quad
+				else if (y >= (y0 + 0.0) / x0 * (x) && y < ly - 1.0*(ly - y0) / (x0-0) * x) {
 					a.u[x][y][0] = 1.0*u0 * (x + 0.0) / x0;
-				} else if (y >= (ly - y0 + 0.0) / (lx - x0) * (x - lx) + ly) {
+				}
+				// upper quad
+				else if (y >= (ly - y0 + 0.0) / (lx - x0) * (x - lx) + ly) {
 					a.u[x][y][0] = 1.0*u0 * (ly - y - 1.0) / (ly - y0 - 1);
-				} else {
+				}
+				// right quad
+				else {
 					a.u[x][y][0] = 1.0*u0 * (lx - x - 1.0) / (lx - x0 - 1);
 				}
 			}
 		}
 
-		a.writeSurface(0);	
+		a.writeSurface(0);
 
 		for(int t=1; t<steps-1; t++){
 			for(int x=1; x<lx-1; x++){
@@ -516,6 +530,8 @@ public class Wave2D{
 			a.samp(t);										/*Defines u(lsqrt(2)/2,t);*/
 			time+=h;
 			//output.printf("%f %f %n", time, a.sample[t]);
+
+			a.writeSurface(t);
 		}
 		
 		for(int y=0; y<ly; y++){							//plots u(x,y) at const t
