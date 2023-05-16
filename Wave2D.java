@@ -487,55 +487,6 @@ public class Wave2D{
 		sample[t] = (x-xL)*(y-yL)*u[xL+1][yL+1][t] + (1-x+xL)*(y-yL)*u[xL][yL+1][t] + (x-xL)*(1-y+yL)*u[xL+1][yL][t] + (1-x+xL)*(1-y+yL)*u[xL][yL][t];
 	}
 
-
-	public static void main(String[] args) throws IOException{
-		Wave2D a = new Wave2D(21, 21, 10, 0.01);
-
-
-		// set the initial t=0 surface shape
-		a.initGaussian(10,10,1.0);
-		//a.initPyramid(10,10,1.0);
-		
-
-		a.writeSurface(0);
-
-		a.runSimulation();
-
-		a.writeResults();
-		
-		// for(int x=0; x<l; x++){
-		// 	output.printf("%d ", x);
-		// 	for(int t=1; t<20; t++){
-		// 		output.printf("%f ", a.u[x][t]);
-		// 	}
-		// 	output.println();
-		// }
-
-		/*int tOutStart = steps - (100/tOutZoom)*800;			Output for zoomed region 1D
-		for(int t=tOutStart; t<steps; t+=100/tOutZoom){
-			for(int x=0; x<l; x++){
-				output.printf("%f ", a.u[x][t]);
-			}
-			output.println();
-		}*/
-
-
-		/*Complex[] complexSamples = new Complex[steps];
-		for(int t=0; t<steps; t++){
-			complexSamples[t] = new Complex(a.sample[t],0);
-		}
-		Complex[] comp = FFT.fft(complexSamples);
-		PrintStream fft2 = new PrintStream(new File("out/fft2.txt"));
-		PrintStream sampFile2 = new PrintStream(new File("out/SampFile2.txt"));
-		time = 0;
-		for(int t=500000; t<steps; t++){
-			fft2.println(time+" "+comp[t].abs());
-			sampFile2.println(time+" "+a.sample[t]);
-			time+=h;
-		}*/
-	}
-
-
 	private void runSimulation() throws IOException {
 		PrintStream spacialTemp1 = new PrintStream(new File("out/2DSpacialTemp1.txt"));
 		PrintStream spacialTemp2 = new PrintStream(new File("out/2DSpacialTemp2.txt"));
@@ -609,6 +560,54 @@ public class Wave2D{
 			outputT.printf("%.3f %.4f %n", time, u[snapX][snapY][t]);
 			time += h;
 		}
+	}
+
+	public static void main(String[] args) throws IOException
+	{
+		
+		Wave2D a = new Wave2D(21, 21, 10, 0.01);
+
+
+		// set the initial t=0 surface shape
+		a.initGaussian(10,10,1.0);
+		//a.initPyramid(10,10,1.0);
+		
+		a.writeSurface(0);
+
+		a.runSimulation();
+
+		a.writeResults();
+		
+		// for(int x=0; x<l; x++){
+		// 	output.printf("%d ", x);
+		// 	for(int t=1; t<20; t++){
+		// 		output.printf("%f ", a.u[x][t]);
+		// 	}
+		// 	output.println();
+		// }
+
+		/*int tOutStart = steps - (100/tOutZoom)*800;			Output for zoomed region 1D
+		for(int t=tOutStart; t<steps; t+=100/tOutZoom){
+			for(int x=0; x<l; x++){
+				output.printf("%f ", a.u[x][t]);
+			}
+			output.println();
+		}*/
+
+
+		/*Complex[] complexSamples = new Complex[steps];
+		for(int t=0; t<steps; t++){
+			complexSamples[t] = new Complex(a.sample[t],0);
+		}
+		Complex[] comp = FFT.fft(complexSamples);
+		PrintStream fft2 = new PrintStream(new File("out/fft2.txt"));
+		PrintStream sampFile2 = new PrintStream(new File("out/SampFile2.txt"));
+		time = 0;
+		for(int t=500000; t<steps; t++){
+			fft2.println(time+" "+comp[t].abs());
+			sampFile2.println(time+" "+a.sample[t]);
+			time+=h;
+		}*/
 	}
 
 }
