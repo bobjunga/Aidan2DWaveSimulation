@@ -13,7 +13,6 @@ Also attached are the Complex and FFT classes that I got from the Prinston CS we
 */
 
 import java.io.*;
-import java.util.*;
 public class Wave1D{
 	static double c, c2, h, time;
 	static int steps, l, x0;
@@ -31,7 +30,6 @@ public class Wave1D{
 	}
 
 	void squareWaveInit(int nodeCount) {
-		double[] u0 = new double[l];
 		double v = 0;
 		for(int x=1; x<l; x++){
 			if ( (x% (l/nodeCount)) == 0 ) {
@@ -46,8 +44,6 @@ public class Wave1D{
 	}
 
 	void triangleWaveInit(int x1, int x2, int x3) {
-		double[] u0 = new double[l];
-		double v = 0;
 		for(int x=1; x<l; x++){
 			if ( x > x3) {
 				u[x][0] = 0;
@@ -182,7 +178,7 @@ public class Wave1D{
 	}
 
 	public static void main(String[] args) throws FileNotFoundException{
-		PrintStream output = new PrintStream(new File("Wave1D.txt"));
+		PrintStream output = new PrintStream(new File("out/Wave1D.txt"));
 		Wave1D a = new Wave1D();
 		for(int t=0; t<steps; t++){						/*boundary conditions*/
 			a.u[0][t] = 0;	a.u[l-1][t] = 0;
@@ -212,7 +208,7 @@ public class Wave1D{
 		for(int t=1; t<steps-1; t++){
 			a.temp[0] = 0; a.temp[l-1] = 0;
 			for(int x=1; x<l-1; x++){
-				a.temp[x] = a.u[x][t-1]+a.uV[x][t-1]*h+a.uA[x][t-1]*Math.pow(a.h,2)/2;			/*temp u(x,t) for calculating uA(x,t)*/
+				a.temp[x] = a.u[x][t-1]+a.uV[x][t-1]*h+a.uA[x][t-1]*Math.pow(h,2)/2;			/*temp u(x,t) for calculating uA(x,t)*/
 			}
 			for(int x=1; x<l-2; x++){
 				a.uA[x][t] = a.u2(x);								/*In terms of temp*/
@@ -246,8 +242,8 @@ public class Wave1D{
 			complexSamples[t] = new Complex(a.sample[t],0);
 		}
 		Complex[] comp = FFT.fft(complexSamples);
-		PrintStream fft = new PrintStream(new File("fft.txt"));
-		PrintStream sampFile = new PrintStream(new File("SampFile.txt"));
+		PrintStream fft = new PrintStream(new File("out/fft.txt"));
+		PrintStream sampFile = new PrintStream(new File("out/SampFile.txt"));
 		time = 0;
 		for(int t=500000; t<steps; t++){
 			fft.println(time+" "+comp[t].abs());

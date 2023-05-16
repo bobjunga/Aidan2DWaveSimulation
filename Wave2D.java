@@ -130,7 +130,7 @@ public class Wave2D{
 		}
 
 		// Write the image to a file
-		String filename = new String("2DSurf-") + timeStep;
+		String filename = new String("out/2DSurf-") + timeStep;
 		File outputfile = new File(filename + ".png");
 		ImageIO.write(image, "png", outputfile);
 
@@ -141,7 +141,6 @@ public class Wave2D{
 				txtOut.printf("%d,%d,%.4f\n", x, y, u[x][y][timeStep]);
 			}
 		}
-
 	}
 
 	double u2(int x, int y){								//2D
@@ -487,15 +486,15 @@ public class Wave2D{
 	}
 
 	public static void main(String[] args) throws IOException{
-		PrintStream spacial1 = new PrintStream(new File("2DSpacial1.txt"));
-		PrintStream spacialV1 = new PrintStream(new File("2DSpacialV1.txt"));
-		PrintStream spacialA1 = new PrintStream(new File("2DSpacialA1.txt"));
-		PrintStream spacialTemp1 = new PrintStream(new File("2DSpacialTemp1.txt"));
-		PrintStream spacial2 = new PrintStream(new File("2DSpacial2.txt"));
-		PrintStream spacialV2 = new PrintStream(new File("2DSpacialV2.txt"));
-		PrintStream spacialA2 = new PrintStream(new File("2DSpacialA2.txt"));
-		PrintStream spacialTemp2 = new PrintStream(new File("2DSpacialTemp2.txt"));
-		PrintStream outputT = new PrintStream(new File("2DTime.txt"));
+		PrintStream spacial1 = new PrintStream(new File("out/2DSpacial1.txt"));
+		PrintStream spacialV1 = new PrintStream(new File("out/2DSpacialV1.txt"));
+		PrintStream spacialA1 = new PrintStream(new File("out/2DSpacialA1.txt"));
+		PrintStream spacialTemp1 = new PrintStream(new File("out/2DSpacialTemp1.txt"));
+		PrintStream spacial2 = new PrintStream(new File("out/2DSpacial2.txt"));
+		PrintStream spacialV2 = new PrintStream(new File("out/2DSpacialV2.txt"));
+		PrintStream spacialA2 = new PrintStream(new File("out/2DSpacialA2.txt"));
+		PrintStream spacialTemp2 = new PrintStream(new File("out/2DSpacialTemp2.txt"));
+		PrintStream outputT = new PrintStream(new File("out/2DTime.txt"));
 
 		Wave2D a = new Wave2D();
 
@@ -588,8 +587,8 @@ public class Wave2D{
 			complexSamples[t] = new Complex(a.sample[t],0);
 		}
 		Complex[] comp = FFT.fft(complexSamples);
-		PrintStream fft2 = new PrintStream(new File("fft2.txt"));
-		PrintStream sampFile2 = new PrintStream(new File("SampFile2.txt"));
+		PrintStream fft2 = new PrintStream(new File("out/fft2.txt"));
+		PrintStream sampFile2 = new PrintStream(new File("out/SampFile2.txt"));
 		time = 0;
 		for(int t=500000; t<steps; t++){
 			fft2.println(time+" "+comp[t].abs());
