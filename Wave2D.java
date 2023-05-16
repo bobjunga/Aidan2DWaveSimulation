@@ -1,20 +1,21 @@
 import java.io.*;
 //import java.util.*;
-import java.security.Timestamp;
+
 // for image output
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
-import java.awt.Graphics2D;
 import java.awt.Color;
 
 public class Wave2D{
-	static double c, c2, h, time, u0;
-	static int steps, lx, ly, x0, y0, snap1, snap2, snapX, snapY;
+	static double c, c2, h, time;
+	static int steps, lx, ly, snap1, snap2, snapX, snapY;
 	double[][][] u, uV, uA;
 	double[][] temp;
 	double[] sample;
+	int x0, y0;
+	double u0;
 
-	public Wave2D(){
+	public Wave2D() {
 		// c is the wave speed c2 is c squared
 		c2 = 15;	c = Math.sqrt(c2);
 		
@@ -43,6 +44,57 @@ public class Wave2D{
 		uA = new double[lx][ly][steps];
 		temp = new double[lx][ly];
 		sample = new double[steps];
+
+		// Init all the allocated data structures to all 0 (java's runtime probably does this so we could skip if it takes significant time)
+		for (int x = 0; x < lx; x++) {
+			for (int y = 0; y < ly; y++) {
+				temp[x][y] = 0;
+				for (int t = 0; t < steps; t++) {
+					u[x][y][t] = 0;
+					uV[x][y][t] = 0;
+					uA[x][y][t] = 0;
+				}
+			}
+		}
+		for (int t = 0; t < steps; t++) {
+			sample[t] = 0;
+		}
+	}
+
+	public void initGaussian(int x0, int y0, double u0) {
+		this.x0 = x0;
+		this.y0 = y0;
+		this.u0 = u0;
+		for(int x=0; x<lx; x++)
+			for(int y=0; y<ly; y++)
+				u[x][y][0] = 0;
+		u[x0][y0][0] = u0;
+	}
+
+	public void initPyramid(int x0, int y0, double u0) {
+		this.x0 = x0;
+		this.y0 = y0;
+		this.u0 = u0;
+		for (int x = 1; x < lx - 1; x++) {
+			for (int y = 1; y < ly - 1; y++) {
+				// lower quad
+				if (y < (y0 + 0.0) / x0 * (x) && y < (y0 + 0.0) / (x0 - lx) * (x - lx)) {
+					u[x][y][0] = 1.0 * u0 * (y + 0.0) / y0;
+				}
+				// left quad
+				else if (y >= (y0 + 0.0) / x0 * (x) && y < ly - 1.0 * (ly - y0) / (x0 - 0) * x) {
+					u[x][y][0] = 1.0 * u0 * (x + 0.0) / x0;
+				}
+				// upper quad
+				else if (y >= (ly - y0 + 0.0) / (lx - x0) * (x - lx) + ly) {
+					u[x][y][0] = 1.0 * u0 * (ly - y - 1.0) / (ly - y0 - 1);
+				}
+				// right quad
+				else {
+					u[x][y][0] = 1.0 * u0 * (lx - x - 1.0) / (lx - x0 - 1);
+				}
+			}
+		}
 	}
 
 	public void writeSurface(int timeStep) throws IOException {
@@ -447,53 +499,11 @@ public class Wave2D{
 
 		Wave2D a = new Wave2D();
 
-		// Init the borders in all time steps to be u=0,uV=0, and uA=0
-		for(int t=0; t<steps; t++){						/*boundary conditions theoretically 2D*/
-			for(int x=0; x<lx; x++){
-				a.u[x][0][t] = 0;	a.u[x][ly-1][t] = 0;
-				a.temp[x][0] = 0;	a.temp[x][ly-1] = 0;
-				a.uV[x][0][t] = 0;	a.uV[x][ly-1][t] = 0;
-				a.uA[x][0][t] = 0;	a.uA[x][ly-1][t] = 0;
-			}
-			for(int y=1; y<ly-1; y++){
-				a.u[0][y][t] = 0;	a.u[lx-1][y][t] = 0;
-				a.temp[0][y] = 0;	a.temp[lx-1][y] = 0;
-				a.uV[0][y][t] = 0;	a.uV[lx-1][y][t] = 0;
-				a.uA[0][y][t] = 0;	a.uA[lx-1][y][t] = 0;
-			}
-		}
 
-		// Init the interior values for the initial t=0 time step
-		/*
-		for(int x=1; x<lx; x++){                       //2D initial conditions (gaussian)
-			for(int y=1; y<ly; y++){
-				if(x == x0 && y == y0){
-					a.u[x][y][0] = u0;
-				} else {
-					a.u[x][y][0] = 0;
-				}
-		}
-		*/
-		for (int x = 1; x < lx - 1; x++) {
-			for (int y = 1; y < ly - 1; y++) {
-				// lower quad
-				if (y < (y0 + 0.0) / x0 * (x) && y < (y0 + 0.0) / (x0 - lx) * (x - lx)) {
-					a.u[x][y][0] = 1.0*u0 * (y + 0.0) / y0;
-				}
-				// left quad
-				else if (y >= (y0 + 0.0) / x0 * (x) && y < ly - 1.0*(ly - y0) / (x0-0) * x) {
-					a.u[x][y][0] = 1.0*u0 * (x + 0.0) / x0;
-				}
-				// upper quad
-				else if (y >= (ly - y0 + 0.0) / (lx - x0) * (x - lx) + ly) {
-					a.u[x][y][0] = 1.0*u0 * (ly - y - 1.0) / (ly - y0 - 1);
-				}
-				// right quad
-				else {
-					a.u[x][y][0] = 1.0*u0 * (lx - x - 1.0) / (lx - x0 - 1);
-				}
-			}
-		}
+		// set the initial t=0 surface shape
+		a.initGaussian(10,10,1.0);
+		//a.initPyramid(10,10,1.0);
+		
 
 		a.writeSurface(0);
 
