@@ -1,21 +1,88 @@
 import java.io.*;
-import java.util.*;
+//import java.util.*;
+import java.security.Timestamp;
+// for image output
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.Color;
+
 public class Wave2D{
-	static double c, c2, h, time;
+	static double c, c2, h, time, u0;
 	static int steps, lx, ly, x0, y0, snap1, snap2, snapX, snapY;
 	double[][][] u, uV, uA;
 	double[][] temp;
 	double[] sample;
 
 	public Wave2D(){
-		c2 = 15;	c = Math.sqrt(c2);	h = 0.01;	time = 0;	snap1 = 0;	snap2 = snap1+1/*(int)(snap1*Math.sqrt(2))*/;
-		steps = 10000;	lx = 10;	ly = 10;	snapX = 4;	snapY = 4;
-		x0 = (int)(0.7*lx)/*(int)(Math.random()*(lx-1)+1)*/;	y0 = (int)(0.3*ly)/*(int)(Math.random()*(ly-1)+1)*/;
-		u = new double[lx][ly][steps];	u[x0][y0][0] = 30;
+		// c is the wave speed c2 is c squared
+		c2 = 15;	c = Math.sqrt(c2);
+		
+		// h is the time step
+		h = 0.01;	time = 0;
+		
+		// snap are locations to print tracing/debugging
+		snap1 = 0;	snap2 = snap1+1/*(int)(snap1*Math.sqrt(2))*/;
+		snapX = 4;
+		snapY = 4;
+
+		// steps is the number of time steps to perform. This is the size of the third array dimension
+		steps = 10000;	
+		
+		// lx and ly are the number of grid points in those directions. These are the sizes of the 1st and 2nd array dimensions
+		lx = 11;	ly = 11;
+
+		// (x0,y0) is the grid point of the initial peak disturbance (used to generate the initial conditions)
+		x0 = (int)(0.5*lx)/*(int)(Math.random()*(lx-1)+1)*/;
+		y0 = (int)(0.5*ly)/*(int)(Math.random()*(ly-1)+1)*/;
+		u0 = 1;
+
+		// allocate the arrays given the lx,ly, and steps values
+		u = new double[lx][ly][steps];
 		uV = new double[lx][ly][steps];
 		uA = new double[lx][ly][steps];
 		temp = new double[lx][ly];
 		sample = new double[steps];
+	}
+
+	public void writeSurface(int timeStep) throws IOException {
+		int height = 300;
+		int width = (int)(height * 1.0*lx/ly);
+		double scaleX = 1.0*lx/width;
+		double scaleY = 1.0 * ly / height;
+		double scaleU = 1.0 * 255 / u0;
+
+		// Create a new image
+		BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+
+		// Draw the image
+		for (int px = 0; px < width; px++) {
+			for (int py = 0; py < height; py++) {
+				// Map pixel coords to surface coords and scale the u value to a grayscale color
+				int x = (int)(px*scaleX);
+				int y = (int) (py * scaleY);
+				int grayValue = (int)(u[x][y][timeStep] * scaleU);
+				grayValue = (grayValue>255) ? 255 : grayValue;
+				Color color = new Color(grayValue, grayValue, grayValue);
+
+				// Set the pixel color
+				image.setRGB(px, py, color.getRGB());
+			}
+		}
+
+		// Write the image to a file
+		String filename = new String("2DSurf-") + timeStep;
+		File outputfile = new File(filename + ".png");
+		ImageIO.write(image, "png", outputfile);
+
+		// write it as a txt file with a pont (x,y,u) on each line
+		PrintStream txtOut = new PrintStream(new File(filename + ".txt"));
+		for (int y = 0; y < ly; y++) {
+			for (int x = 0; x < lx; x++) {
+				txtOut.printf("%d,%d,%.4f\n", x, y, u[x][y][timeStep]);
+			}
+		}
+
 	}
 
 	double u2(int x, int y){								//2D
@@ -360,7 +427,7 @@ public class Wave2D{
 		sample[t] = (x-xL)*(y-yL)*u[xL+1][yL+1][t] + (1-x+xL)*(y-yL)*u[xL][yL+1][t] + (x-xL)*(1-y+yL)*u[xL+1][yL][t] + (1-x+xL)*(1-y+yL)*u[xL][yL][t];
 	}
 
-	public static void main(String[] args) throws FileNotFoundException{
+	public static void main(String[] args) throws IOException{
 		PrintStream spacial1 = new PrintStream(new File("2DSpacial1.txt"));
 		PrintStream spacialV1 = new PrintStream(new File("2DSpacialV1.txt"));
 		PrintStream spacialA1 = new PrintStream(new File("2DSpacialA1.txt"));
@@ -370,7 +437,10 @@ public class Wave2D{
 		PrintStream spacialA2 = new PrintStream(new File("2DSpacialA2.txt"));
 		PrintStream spacialTemp2 = new PrintStream(new File("2DSpacialTemp2.txt"));
 		PrintStream outputT = new PrintStream(new File("2DTime.txt"));
+
 		Wave2D a = new Wave2D();
+
+		// Init the borders in all time steps to be u=0,uV=0, and uA=0
 		for(int t=0; t<steps; t++){						/*boundary conditions theoretically 2D*/
 			for(int x=0; x<lx; x++){
 				a.u[x][0][t] = 0;	a.u[x][ly-1][t] = 0;
@@ -385,35 +455,38 @@ public class Wave2D{
 				a.uA[0][y][t] = 0;	a.uA[lx-1][y][t] = 0;
 			}
 		}
-		/*for(int x=1; x<lx; x++){						//2D initial conditions (gaussian)
+
+		// Init the interior values for the initial t=0 time step
+		/*
+		for(int x=1; x<lx; x++){                       //2D initial conditions (gaussian)
 			for(int y=1; y<ly; y++){
 				if(x == x0 && y == y0){
-					y++;
+					a.u[x][y][0] = u0;
+				} else {
+					a.u[x][y][0] = 0;
 				}
-				a.u[x][y][0] = 0;
-			}
-		}*/
-		for(int x=1; x<lx-1; x++){
-			for(int y=1; y<ly-1; y++){
-				if(y < (y0+0.0)/x0*(x) && y < (y0+0.0)/(x0-lx)*(x-lx)){
-					a.u[x][y][0] = (y+0.0)/y0;
-				}
-				else if(y > (y0+0.0)/x0*(x) && y < -(ly-y0)/x0*x+ly){
-					a.u[x][y][0] = (x+0.0)/x0;
-				}
-				else if(y >= (ly-y0+0.0)/(lx-x0)*(x-lx)+ly){
-					a.u[x][y][0] = (ly-y-1.0)/(ly-y0-1);
-				}
-				else{
-					a.u[x][y][0] = (lx-x-1.0)/(lx-x0-1);
+		}
+		*/
+		for (int x = 1; x < lx - 1; x++) {
+			for (int y = 1; y < ly - 1; y++) {
+				if (y < (y0 + 0.0) / x0 * (x) && y < (y0 + 0.0) / (x0 - lx) * (x - lx)) {
+					a.u[x][y][0] = 1.0*u0 * (y + 0.0) / y0;
+				} else if (y > (y0 + 0.0) / x0 * (x) && y < -(ly - y0) / x0 * x + ly) {
+					a.u[x][y][0] = 1.0*u0 * (x + 0.0) / x0;
+				} else if (y >= (ly - y0 + 0.0) / (lx - x0) * (x - lx) + ly) {
+					a.u[x][y][0] = 1.0*u0 * (ly - y - 1.0) / (ly - y0 - 1);
+				} else {
+					a.u[x][y][0] = 1.0*u0 * (lx - x - 1.0) / (lx - x0 - 1);
 				}
 			}
 		}
-		
+
+		a.writeSurface(0);	
+
 		for(int t=1; t<steps-1; t++){
 			for(int x=1; x<lx-1; x++){
 				for(int y=1; y<ly-1; y++){
-					a.temp[x][y] = a.u[x][y][t-1]+a.uV[x][y][t-1]*h+a.uA[x][y][t-1]*Math.pow(a.h,2)/2;			//temp u(x,y,t) for calculating uA(x,y,t)
+					a.temp[x][y] = a.u[x][y][t-1]+a.uV[x][y][t-1]*h+a.uA[x][y][t-1]*Math.pow(h,2)/2;			//temp u(x,y,t) for calculating uA(x,y,t)
 					if(t == snap1){
 						spacialTemp1.printf("%.4f ", a.temp[x][y]);
 					}
