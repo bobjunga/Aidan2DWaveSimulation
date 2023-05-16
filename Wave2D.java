@@ -7,13 +7,13 @@ import javax.imageio.ImageIO;
 import java.awt.Color;
 
 public class Wave2D{
-	static double c, c2, h, time;
-	static int steps, lx, ly, snap1, snap2, snapX, snapY;
+	static double c, c2, time;
+	static int snap1, snap2, snapX, snapY;
 	double[][][] u, uV, uA;
 	double[][] temp;
 	double[] sample;
-	int x0, y0;
-	double u0;
+	int x0, y0, steps, lx, ly;
+	double u0, h;
 
 	public Wave2D(int lx, int ly, int stepCount, double stepDuration) {
 		// lx and ly are the number of grid points in those directions. These are the sizes of the 1st and 2nd array dimensions
@@ -487,17 +487,8 @@ public class Wave2D{
 		sample[t] = (x-xL)*(y-yL)*u[xL+1][yL+1][t] + (1-x+xL)*(y-yL)*u[xL][yL+1][t] + (x-xL)*(1-y+yL)*u[xL+1][yL][t] + (1-x+xL)*(1-y+yL)*u[xL][yL][t];
 	}
 
-	public static void main(String[] args) throws IOException{
-		PrintStream spacial1 = new PrintStream(new File("out/2DSpacial1.txt"));
-		PrintStream spacialV1 = new PrintStream(new File("out/2DSpacialV1.txt"));
-		PrintStream spacialA1 = new PrintStream(new File("out/2DSpacialA1.txt"));
-		PrintStream spacialTemp1 = new PrintStream(new File("out/2DSpacialTemp1.txt"));
-		PrintStream spacial2 = new PrintStream(new File("out/2DSpacial2.txt"));
-		PrintStream spacialV2 = new PrintStream(new File("out/2DSpacialV2.txt"));
-		PrintStream spacialA2 = new PrintStream(new File("out/2DSpacialA2.txt"));
-		PrintStream spacialTemp2 = new PrintStream(new File("out/2DSpacialTemp2.txt"));
-		PrintStream outputT = new PrintStream(new File("out/2DTime.txt"));
 
+	public static void main(String[] args) throws IOException{
 		Wave2D a = new Wave2D(21, 21, 10, 0.01);
 
 
@@ -508,64 +499,9 @@ public class Wave2D{
 
 		a.writeSurface(0);
 
-		for(int t=1; t<steps-1; t++){
-			for(int x=1; x<lx-1; x++){
-				for(int y=1; y<ly-1; y++){
-					a.temp[x][y] = a.u[x][y][t-1]+a.uV[x][y][t-1]*h+a.uA[x][y][t-1]*Math.pow(h,2)/2;			//temp u(x,y,t) for calculating uA(x,y,t)
-					if(t == snap1){
-						spacialTemp1.printf("%.4f ", a.temp[x][y]);
-					}
-					else if(t == snap2){
-						spacialTemp2.printf("%.4f ", a.temp[x][y]);
-					}
-				}
-				if(t == snap1){
-					spacialTemp1.printf("%n");
-				}
-				else if(t == snap2){
-					spacialTemp2.printf("%n");
-				}
-			}
-			for(int x=1; x<lx-2; x++){
-				for(int y=1; y<ly-2; y++){
-					a.uA[x][y][t] = a.u2(x,y);								/*In terms of temp*/
-					a.rkA(x,y,t);											/*Defines uV(x,t)*/
-					a.rkV(x,y,t);											/*Defines u(x,t)*/
-				}
-			}
-			for(int x=1; x<lx-2; x++){
-				for(int y=1; y<ly-2; y++){
-					a.uA[x][y][t] = a.u2(x,y,t);							/*In terms of u*/
-				}
-			}
-			a.samp(t);										/*Defines u(lsqrt(2)/2,t);*/
-			time+=h;
-			//output.printf("%f %f %n", time, a.sample[t]);
+		a.runSimulation();
 
-			a.writeSurface(t);
-		}
-		
-		for(int y=0; y<ly; y++){							//plots u(x,y) at const t
-			for(int x=0; x<lx; x++){
-				spacial1.printf("%.4f ", a.u[x][y][snap1]);
-				spacialV1.printf("%.4f ", a.uV[x][y][snap1]);
-				spacialA1.printf("%.4f ", a.uA[x][y][snap1]);
-				spacial2.printf("%.4f ", a.u[x][y][snap2]);
-				spacialV2.printf("%.4f ", a.uV[x][y][snap2]);
-				spacialA2.printf("%.4f ", a.uA[x][y][snap2]);
-			}
-			spacial1.printf("%n");
-			spacialV1.printf("%n");
-			spacialA1.printf("%n");
-			spacial2.printf("%n");
-			spacialV2.printf("%n");
-			spacialA2.printf("%n");
-		}
-		time=0;
-		for(int t=0; t<steps; t++){							//plots u(t) at const x,y
-			outputT.printf("%.3f %.4f %n", time, a.u[snapX][snapY][t]);
-			time+=h;
-		}
+		a.writeResults();
 		
 		// for(int x=0; x<l; x++){
 		// 	output.printf("%d ", x);
@@ -598,4 +534,81 @@ public class Wave2D{
 			time+=h;
 		}*/
 	}
+
+
+	private void runSimulation() throws IOException {
+		PrintStream spacialTemp1 = new PrintStream(new File("out/2DSpacialTemp1.txt"));
+		PrintStream spacialTemp2 = new PrintStream(new File("out/2DSpacialTemp2.txt"));
+		for (int t = 1; t < steps - 1; t++) {
+			for (int x = 1; x < lx - 1; x++) {
+				for (int y = 1; y < ly - 1; y++) {
+					temp[x][y] = u[x][y][t - 1] + uV[x][y][t - 1] * h + uA[x][y][t - 1] * Math.pow(h, 2) / 2; // temp
+																														// u(x,y,t)
+																														// for
+																														// calculating
+																														// uA(x,y,t)
+					if (t == snap1) {
+						spacialTemp1.printf("%.4f ", temp[x][y]);
+					} else if (t == snap2) {
+						spacialTemp2.printf("%.4f ", temp[x][y]);
+					}
+				}
+				if (t == snap1) {
+					spacialTemp1.printf("%n");
+				} else if (t == snap2) {
+					spacialTemp2.printf("%n");
+				}
+			}
+			for (int x = 1; x < lx - 2; x++) {
+				for (int y = 1; y < ly - 2; y++) {
+					uA[x][y][t] = u2(x, y); /* In terms of temp */
+					rkA(x, y, t); /* Defines uV(x,t) */
+					rkV(x, y, t); /* Defines u(x,t) */
+				}
+			}
+			for (int x = 1; x < lx - 2; x++) {
+				for (int y = 1; y < ly - 2; y++) {
+					uA[x][y][t] = u2(x, y, t); /* In terms of u */
+				}
+			}
+			samp(t); /* Defines u(lsqrt(2)/2,t); */
+			time += h;
+			// output.printf("%f %f %n", time, sample[t]);
+
+			writeSurface(t);
+		}
+	}
+
+	private void writeResults() throws FileNotFoundException {
+		PrintStream spacial1 = new PrintStream(new File("out/2DSpacial1.txt"));
+		PrintStream spacialV1 = new PrintStream(new File("out/2DSpacialV1.txt"));
+		PrintStream spacialA1 = new PrintStream(new File("out/2DSpacialA1.txt"));
+		PrintStream spacial2 = new PrintStream(new File("out/2DSpacial2.txt"));
+		PrintStream spacialV2 = new PrintStream(new File("out/2DSpacialV2.txt"));
+		PrintStream spacialA2 = new PrintStream(new File("out/2DSpacialA2.txt"));
+		PrintStream outputT = new PrintStream(new File("out/2DTime.txt"));
+
+		for (int y = 0; y < ly; y++) { // plots u(x,y) at const t
+			for (int x = 0; x < lx; x++) {
+				spacial1.printf("%.4f ", u[x][y][snap1]);
+				spacialV1.printf("%.4f ", uV[x][y][snap1]);
+				spacialA1.printf("%.4f ", uA[x][y][snap1]);
+				spacial2.printf("%.4f ", u[x][y][snap2]);
+				spacialV2.printf("%.4f ", uV[x][y][snap2]);
+				spacialA2.printf("%.4f ", uA[x][y][snap2]);
+			}
+			spacial1.printf("%n");
+			spacialV1.printf("%n");
+			spacialA1.printf("%n");
+			spacial2.printf("%n");
+			spacialV2.printf("%n");
+			spacialA2.printf("%n");
+		}
+		time = 0;
+		for (int t = 0; t < steps; t++) { // plots u(t) at const x,y
+			outputT.printf("%.3f %.4f %n", time, u[snapX][snapY][t]);
+			time += h;
+		}
+	}
+
 }
