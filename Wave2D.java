@@ -1,5 +1,6 @@
 import java.io.*;
 //import java.util.*;
+import java.nio.file.*;
 
 // for image output
 import java.awt.image.BufferedImage;
@@ -12,18 +13,29 @@ public class Wave2D{
 	double[][][] u, uV, uA;
 	double[][] temp;
 	double[] sample;
-	int x0, y0, steps, lx, ly;
-	double u0, h;
 
-	public Wave2D(int lx, int ly, int stepCount, double stepDuration) {
-		// lx and ly are the number of grid points in those directions. These are the sizes of the 1st and 2nd array dimensions
+	int x0;             // peak x coord
+	int y0;             // peak y coord
+	double u0;          // peak u coord
+
+	int lx;             // size of the grid in x direction
+	int ly;             // size of the grid in y direction
+
+	int steps;          // the number of time steps to perform in simulation. this is also the size of the grid in the time (3rd) dimension
+	double h;           // the duration of each time step
+
+	int outputSkipCount;    // the number of surfaces to output
+
+	// constructor passes in enough information to determine the sizes of the allocated variables (the grids aka arrays)
+	public Wave2D(int lx, int ly, int stepCount, double stepDuration, int outputCount) 
+	{
 		this.lx = lx;
 		this.ly = ly;
 
-		// steps is the number of time steps to perform. This is the size of the third array dimension
-		// h is the duration of each step (seconds)
 		this.steps = stepCount;
 		this.h = stepDuration;
+
+		this.outputSkipCount = stepCount / outputCount;
 
 		// c is the wave speed c2 is c squared
 		c2 = 15;	c = Math.sqrt(c2);
@@ -487,17 +499,27 @@ public class Wave2D{
 		sample[t] = (x-xL)*(y-yL)*u[xL+1][yL+1][t] + (1-x+xL)*(y-yL)*u[xL][yL+1][t] + (x-xL)*(1-y+yL)*u[xL+1][yL][t] + (1-x+xL)*(1-y+yL)*u[xL][yL][t];
 	}
 
+	// delete the output files that this program creates.
+	// This is useful in case you lower the outputCount so that old, higher count files are not left over
+	public void cleanOutput() throws IOException {
+		Path dir = Paths.get("out");
+		DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "2D*");
+		for (Path entry : stream) {
+			Files.delete(entry);
+			// System.out.println("Deleted: " + entry);
+		}
+	}
+
+
 	private void runSimulation() throws IOException {
+		cleanOutput();
+
 		PrintStream spacialTemp1 = new PrintStream(new File("out/2DSpacialTemp1.txt"));
 		PrintStream spacialTemp2 = new PrintStream(new File("out/2DSpacialTemp2.txt"));
 		for (int t = 1; t < steps - 1; t++) {
 			for (int x = 1; x < lx - 1; x++) {
 				for (int y = 1; y < ly - 1; y++) {
-					temp[x][y] = u[x][y][t - 1] + uV[x][y][t - 1] * h + uA[x][y][t - 1] * Math.pow(h, 2) / 2; // temp
-																														// u(x,y,t)
-																														// for
-																														// calculating
-																														// uA(x,y,t)
+					temp[x][y] = u[x][y][t - 1] + uV[x][y][t - 1] * h + uA[x][y][t - 1] * Math.pow(h, 2) / 2; // temp u(x,y,t) for calculating uA(x,y,t)
 					if (t == snap1) {
 						spacialTemp1.printf("%.4f ", temp[x][y]);
 					} else if (t == snap2) {
@@ -526,7 +548,9 @@ public class Wave2D{
 			time += h;
 			// output.printf("%f %f %n", time, sample[t]);
 
-			writeSurface(t);
+			if (t%outputSkipCount == 0) {
+				writeSurface(t);
+			}
 		}
 	}
 
@@ -565,7 +589,7 @@ public class Wave2D{
 	public static void main(String[] args) throws IOException
 	{
 		
-		Wave2D a = new Wave2D(21, 21, 10, 0.01);
+		Wave2D a = new Wave2D(21, 21, 1000, 0.01, 10);
 
 
 		// set the initial t=0 surface shape
