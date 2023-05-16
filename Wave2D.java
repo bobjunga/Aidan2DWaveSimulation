@@ -15,23 +15,25 @@ public class Wave2D{
 	int x0, y0;
 	double u0;
 
-	public Wave2D() {
+	public Wave2D(int lx, int ly, int stepCount, double stepDuration) {
+		// lx and ly are the number of grid points in those directions. These are the sizes of the 1st and 2nd array dimensions
+		this.lx = lx;
+		this.ly = ly;
+
+		// steps is the number of time steps to perform. This is the size of the third array dimension
+		// h is the duration of each step (seconds)
+		this.steps = stepCount;
+		this.h = stepDuration;
+
 		// c is the wave speed c2 is c squared
 		c2 = 15;	c = Math.sqrt(c2);
 		
-		// h is the time step
-		h = 0.01;	time = 0;
+		time = 0;
 		
 		// snap are locations to print tracing/debugging
 		snap1 = 0;	snap2 = snap1+1/*(int)(snap1*Math.sqrt(2))*/;
 		snapX = 4;
 		snapY = 4;
-
-		// steps is the number of time steps to perform. This is the size of the third array dimension
-		steps = 10;
-		
-		// lx and ly are the number of grid points in those directions. These are the sizes of the 1st and 2nd array dimensions
-		lx = 21;	ly = 21;
 
 		// (x0,y0) is the grid point of the initial peak disturbance (used to generate the initial conditions)
 		x0 = (int)(0.5*lx)/*(int)(Math.random()*(lx-1)+1)*/;
@@ -130,12 +132,12 @@ public class Wave2D{
 		}
 
 		// Write the image to a file
-		String filename = new String("out/2DSurf-") + timeStep;
-		File outputfile = new File(filename + ".png");
+		String baseFilename = new String("out/2DSurf-") + timeStep;
+		File outputfile = new File(baseFilename + ".png");
 		ImageIO.write(image, "png", outputfile);
 
 		// write it as a txt file with a pont (x,y,u) on each line
-		PrintStream txtOut = new PrintStream(new File(filename + ".txt"));
+		PrintStream txtOut = new PrintStream(new File(baseFilename + ".txt"));
 		for (int y = 0; y < ly; y++) {
 			for (int x = 0; x < lx; x++) {
 				txtOut.printf("%d,%d,%.4f\n", x, y, u[x][y][timeStep]);
@@ -496,7 +498,7 @@ public class Wave2D{
 		PrintStream spacialTemp2 = new PrintStream(new File("out/2DSpacialTemp2.txt"));
 		PrintStream outputT = new PrintStream(new File("out/2DTime.txt"));
 
-		Wave2D a = new Wave2D();
+		Wave2D a = new Wave2D(21, 21, 10, 0.01);
 
 
 		// set the initial t=0 surface shape
