@@ -43,7 +43,7 @@ public class Wave2D{
 		time = 0;
 		
 		// snap are locations to print tracing/debugging
-		snap1 = 0;	snap2 = snap1+1/*(int)(snap1*Math.sqrt(2))*/;
+		snap1 = 1;	snap2 = snap1+1/*(int)(snap1*Math.sqrt(2))*/;
 		snapX = 4;
 		snapY = 4;
 
@@ -174,11 +174,12 @@ public class Wave2D{
 				StandardOpenOption.APPEND,
 				StandardOpenOption.CREATE);
 
-		// write it as a txt file with a pont (x,y,u) on each line
+		// write it as a txt file with a pont (x,y,u,uV,uA,temp) on each line
 		PrintStream txtOut = new PrintStream(new File("out/" + baseFilename + ".txt"));
+		txtOut.printf("%3s,%3s,%8s,%8s,%8s,%8s\n", "x", "y", "u", "uV", "uA", "temp");
 		for (int y = 0; y < ly; y++) {
 			for (int x = 0; x < lx; x++) {
-				txtOut.printf("%d,%d,%.4f\n", x, y, u[x][y][timeStep]);
+				txtOut.printf("%3d,%3d,%8.4f,%8.4f,%8.4f,%8.4f\n", x, y, u[x][y][timeStep], uV[x][y][timeStep], uA[x][y][timeStep], temp[x][y]);
 			}
 		}
 	}
@@ -633,14 +634,19 @@ public class Wave2D{
 
 	public static void main(String[] args) throws IOException, InterruptedException
 	{
+		// make sure the "out" sub folder exists
+		File outDir = new File("out");
+		if (!outDir.exists()) {
+			outDir.mkdir();
+		}		
 		
 		Wave2D a = new Wave2D(21, 21, 1000, 0.01, 10);
 
 		a.cleanOutput();
 
-		// set the initial t=0 surface shape
-		//a.initGaussian(10,10,1.0);
-		a.initPyramid(10,10,1.0);
+		// set the initial t=0 surface shape. uncomment only one of the following
+		a.initGaussian(10,10,1.0);
+		//a.initPyramid(10,10,1.0);
 		//a.initCone(10,10,1.0);
 		
 		a.writeSurface(0);
