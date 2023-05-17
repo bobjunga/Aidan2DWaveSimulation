@@ -75,6 +75,8 @@ public class Wave2D{
 		}
 	}
 
+	// this is one of the methods that can be used to initialize the initial conditions of the simulation
+	// this one creates a gaussian point disturbance
 	public void initGaussian(int x0, int y0, double u0) {
 		this.x0 = x0;
 		this.y0 = y0;
@@ -85,6 +87,8 @@ public class Wave2D{
 		u[x0][y0][0] = u0;
 	}
 
+	// this is one of the methods that can be used to initialize the initial conditions of the simulation
+	// this one creates a pyramid shape
 	public void initPyramid(int x0, int y0, double u0) {
 		this.x0 = x0;
 		this.y0 = y0;
@@ -111,12 +115,32 @@ public class Wave2D{
 		}
 	}
 
+	// this is one of the methods that can be used to initialize the initial conditions of the simulation
+	// this one creates a cone shape
+	public void initCone(int x0, int y0, double u0) {
+		this.x0 = x0;
+		this.y0 = y0;
+		this.u0 = u0;
+		for (int x = 1; x < lx - 1; x++) {
+			for (int y = 1; y < ly - 1; y++) {
+				u[x][y][0] = 1.0 * u0 * (1.0 - Math.sqrt((x - x0) * (x - x0) + (y - y0) * (y - y0)) / Math.sqrt(x0 * x0 + y0 * y0));
+				if (u[x][y][0] < 0)
+					u[x][y][0] = 0;
+			}
+		}
+	}
+
+	public Color uToColor(double u) {
+		int v = (int) (128 + (255 * u / (u0*2)));
+		v = (v>255) ? 255 : (v<0) ? 0 : v;
+		return new Color(v, v, v);
+	}
+
 	public void writeSurface(int timeStep) throws IOException {
 		int height = 300;
 		int width = (int)(height * 1.0*lx/ly);
 		double scaleX = 1.0*lx/width;
 		double scaleY = 1.0 * ly / height;
-		double scaleU = 1.0 * 255 / u0;
 
 		// Create a new image
 		BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
@@ -127,16 +151,11 @@ public class Wave2D{
 				// Map pixel coords to surface coords and scale the u value to a grayscale color
 				int x = (int)(px*scaleX);
 				int y = ly -1 - (int) (py * scaleY);
-				int grayValue = (int)(u[x][y][timeStep] * scaleU);
-
-				// clip grayValue to 255 in case there is an error it wont crash the run 
-				grayValue = (grayValue>255) ? 255 : grayValue;
+				Color color = uToColor(u[x][y][timeStep]);
 
 				// this makes 1 pixel wide X and Y axis so we know where the origin is.
 				if (px==0 || py==height-1)
-					grayValue = 255;
-
-				Color color = new Color(grayValue, grayValue, grayValue);
+					color = new Color(255,255,255);
 
 				// Set the pixel color
 				image.setRGB(px, py, color.getRGB());
@@ -144,16 +163,38 @@ public class Wave2D{
 		}
 
 		// Write the image to a file
-		String baseFilename = new String("out/2DSurf-") + timeStep;
-		File outputfile = new File(baseFilename + ".png");
+		String baseFilename = new String("2DSurf-") + timeStep;
+		File outputfile = new File("out/" + baseFilename + ".png");
 		ImageIO.write(image, "png", outputfile);
 
+		// add this filename to the manifest file so that we can make a video later
+		Files.writeString(
+				Paths.get("out/2DSurf.manifest"), 
+				"file " + baseFilename + ".png" + System.lineSeparator(), 
+				StandardOpenOption.APPEND,
+				StandardOpenOption.CREATE);
+
 		// write it as a txt file with a pont (x,y,u) on each line
-		PrintStream txtOut = new PrintStream(new File(baseFilename + ".txt"));
+		PrintStream txtOut = new PrintStream(new File("out/" + baseFilename + ".txt"));
 		for (int y = 0; y < ly; y++) {
 			for (int x = 0; x < lx; x++) {
 				txtOut.printf("%d,%d,%.4f\n", x, y, u[x][y][timeStep]);
 			}
+		}
+	}
+
+	public void writeVideo() throws IOException, InterruptedException {
+		// combine the output files into a single video file. the -r 2 option makes it display 2 images per second
+		System.out.print("Combining surface heat map files into a single video file...");
+		try {
+			ProcessBuilder processBuilder = new ProcessBuilder(
+				"ffmpeg", "-r", "2", "-f", "concat", "-i", "out/2DSurf.manifest", "-c:v", "libx264", "-vf", "fps=25,format=yuv420p", "out/2DSurf.mp4");
+			//processBuilder.inheritIO(); // uncomment this line to see ffmpeg's output in case its not producing the video correctly
+			Process process = processBuilder.start();
+			process.waitFor();
+			System.out.println("  Done.");
+		} catch (IOException e) {
+			System.out.println("  \033[41m\033[37mFailed. Is ffmpeg installed?\033[0m");
 		}
 	}
 
@@ -511,8 +552,9 @@ public class Wave2D{
 	}
 
 
-	private void runSimulation() throws IOException {
-		cleanOutput();
+	private void runSimulation() throws IOException, InterruptedException
+	{
+		System.out.printf("Running simulation with %d steps. On step: _______", steps);
 
 		PrintStream spacialTemp1 = new PrintStream(new File("out/2DSpacialTemp1.txt"));
 		PrintStream spacialTemp2 = new PrintStream(new File("out/2DSpacialTemp2.txt"));
@@ -549,12 +591,15 @@ public class Wave2D{
 			// output.printf("%f %f %n", time, sample[t]);
 
 			if (t%outputSkipCount == 0) {
+				System.out.printf("\033[7D%7d", t);
 				writeSurface(t);
 			}
 		}
+		System.out.printf("\033[7D%-7s%n", "Done.");
+
 	}
 
-	private void writeResults() throws FileNotFoundException {
+	private void writeOutput() throws FileNotFoundException {
 		PrintStream spacial1 = new PrintStream(new File("out/2DSpacial1.txt"));
 		PrintStream spacialV1 = new PrintStream(new File("out/2DSpacialV1.txt"));
 		PrintStream spacialA1 = new PrintStream(new File("out/2DSpacialA1.txt"));
@@ -586,22 +631,26 @@ public class Wave2D{
 		}
 	}
 
-	public static void main(String[] args) throws IOException
+	public static void main(String[] args) throws IOException, InterruptedException
 	{
 		
 		Wave2D a = new Wave2D(21, 21, 1000, 0.01, 10);
 
+		a.cleanOutput();
 
 		// set the initial t=0 surface shape
-		a.initGaussian(10,10,1.0);
-		//a.initPyramid(10,10,1.0);
+		//a.initGaussian(10,10,1.0);
+		a.initPyramid(10,10,1.0);
+		//a.initCone(10,10,1.0);
 		
 		a.writeSurface(0);
 
 		a.runSimulation();
 
-		a.writeResults();
-		
+		a.writeVideo();
+
+		a.writeOutput();
+	
 		// for(int x=0; x<l; x++){
 		// 	output.printf("%d ", x);
 		// 	for(int t=1; t<20; t++){
